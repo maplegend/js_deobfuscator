@@ -187,11 +187,40 @@ fs.readFile('script.js', 'utf8' , (err, data) => {
         }
     }
 
-    var varRe = /[^a-zA-Z"\|\(\)\-\|\]\[\.\/][A-Za-z0-0$_]{1,3}[^a-zA-Z0-9"\|\(\)\-\|\]\[\.\/\+]/g
-    var fTable = /, ([A-Za-z0-0$_]{1,3} = [^{]*?\n*)+\;\n/g
+    var varRe = /[^a-zA-Z"\|\-\|\.\/]([A-Za-z0-9$_]{1,3})(?=[^a-zA-Z0-9"\|\-\|\.\/\+])/g
+    var varSRe = /[A-Za-z0-9$_]{1,3}/g
+    var fTableRe = /, ([A-Za-z0-0$_]{1,3} = [^{]*?\n*)+\;\n/g
+    var tableE = /, ([A-Za-z0-0$_]{1,3} = [^{]*?\n)/g
+    var fTable = {}
     
+    var fTableS = data.match(fTableRe).reduce((prev, current) => (prev.length > current.length) ? prev : current)
+    var tms = fTableS.match(tableE)
+    for(const [i, v] of tms.entries()) {
+        var vs = v.split(' = ')
+        fTable[vs[0].replace(', ', '')] = vs[1].replace('\n', '')
+        if(i == tms.length -1) {
+            fTable[vs[0].replace(', ', '')] = vs[1].replace('\n', '').replace(';', '')
+        }
+    }
     
-    //console.log()
+    //console.log(fTable)
+
+    data = data.replace(varRe, function(r) {
+        var v = r.match(varSRe)[0]
+        console.log(r, v, v in fTable)
+        if(v in fTable) {
+            var rr = r.replace(varSRe, fTable[v])
+            console.log('replace for', rr)
+            return rr
+        } else
+            return r
+    })
+
+    var strRe = /(((\".{3}\" \+ )+(\".{1,3}\"){1}))|(\"[^ ]{3}\"?=[^ ])/g
+    data = data.replace(strRe, function(r) {
+        return `"${r.replace(/[\" +]+/g, '')}"`
+    })
+
     //return
     fs.writeFile('deob_script.js', data, function (err) {
         if (err) return console.log(err);
